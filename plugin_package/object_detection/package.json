@@ -1,0 +1,32 @@
+{
+    "name": "object_detection",
+    "id": "object_detection",
+    "version": "0.1",
+    "description": "摄像头物体检测插件",
+    "_dp_type": "nativeplugin",
+    "_dp_nativeplugin": {
+        "ios": {
+            "plugins": [
+                {
+                    "type": "component",
+                    "name": "object-detector-view",
+                    "class": "ObjectDetectorComponent"
+                }
+            ],
+            "frameworks": [
+                "AVFoundation.framework",
+                "Vision.framework",
+                "CoreML.framework"
+            ],
+            "integrateType": "framework",
+            "deploymentTarget": "13.0",
+            "embedSwift": true,
+            "validArchitectures": [
+                "arm64"
+            ],
+            "resources": [
+                "yolov8n.mlmodelc"
+            ]
+        }
+    }
+}

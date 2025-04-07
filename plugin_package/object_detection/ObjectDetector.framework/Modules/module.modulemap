@@ -1,0 +1,4 @@
+framework module ObjectDetector {
+  header "ObjectDetector-Swift.h"
+  requires objc
+}

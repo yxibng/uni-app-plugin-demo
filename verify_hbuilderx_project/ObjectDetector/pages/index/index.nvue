@@ -1,0 +1,300 @@
+<template>
+	<view class="container">
+		<!-- 全屏摄像头组件 -->
+		<object-detector-view class="detector-view" ref="detector" :load="loadData" @onCameraOpen="onCameraOpen"
+			@onCameraClose="onCameraClose" @onDetectionCapture="onDetectionCapture" @onCaptured="onCaptured"
+			@onError="onError"></object-detector-view>
+
+		<!-- 控制区域 -->
+		<view class="control-area">
+			<!-- 图片预览区（完整显示图片） -->
+			<view class="preview-wrapper">
+				<image v-if="imageBase64" class="preview-img" :src="imageBase64" mode="aspectFit" :style="imageStyle">
+				</image>
+				<image v-if="vehicleBase64" class="preview-img" :src="vehicleBase64" mode="aspectFit"
+					:style="imageStyle"></image>
+			</view>
+
+			<!-- 操作按钮 -->
+			<view class="button-wrapper">
+				<button class="btn" @click="openCamera">开启</button>
+				<button class="btn" @click="closeCamera">关闭</button>
+				<button class="btn" @click="switchFlash">闪光灯</button>
+				<button class="btn" @click="takePicture">拍照</button>
+				<button class="btn" @click="zoomIn">zoomin</button>
+				<button class="btn" @click="zoomOut">zoomout</button>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style scoped>
+	/* 核心容器 */
+	.container {
+		position: relative;
+		width: 750rpx;
+		height: 1334rpx;
+	}
+
+	/* 全屏摄像头 */
+	.detector-view {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 750rpx;
+		height: 1334rpx;
+	}
+
+	/* 控制区域 */
+	.control-area {
+		position: absolute;
+		bottom: 0;
+		width: 750rpx;
+		height: 400rpx;
+		background-color: rgba(0, 0, 0, 0.7);
+	}
+
+	/* 图片预览区 */
+	.preview-wrapper {
+		height: 250rpx;
+		flex-direction: row;
+		justify-content: space-around;
+		align-items: center;
+		padding: 20rpx;
+	}
+
+	.preview-img {
+		border-width: 2rpx;
+		border-color: #ffffff;
+		border-radius: 16rpx;
+		background-color: #000;
+	}
+
+	/* 按钮区域 */
+	.button-wrapper {
+		height: 150rpx;
+		flex-direction: row;
+		justify-content: space-around;
+		align-items: center;
+		padding: 0 20rpx;
+	}
+
+	.btn {
+		flex: 1;
+		height: 80rpx;
+		margin: 0 10rpx;
+		background-color: rgba(255, 255, 255, 0.2);
+		border-radius: 40rpx;
+		font-size: 28rpx;
+		color: #ffffff;
+		text-align: center;
+		line-height: 80rpx;
+	}
+</style>
+<script>
+	export default {
+		mounted() {
+			// Check if the plugin is properly loaded
+			console.log('Camera component reference:', this.$refs.detector);
+			// Check available methods
+			if (this.$refs.detector) {
+				console.log('Available methods:', Object.keys(this.$refs.detector));
+			}
+		},
+		computed: {
+			imageStyle() {
+				// 根据图片实际比例动态调整样式
+				return {
+					width: this.imageRatio > 1 ? '500rpx' : '300rpx',
+					height: this.imageRatio > 1 ? '300rpx' : '500rpx'
+				}
+			}
+		},
+		data() {
+			return {
+				imageBase64: '',
+				vehicleBase64: '',
+				loadData: {},
+				imageRatio: 1, // 默认宽高比
+				isFlashOn: false, // 新增闪光灯状态标识
+				zoomLevel: 0
+
+			}
+		},
+		methods: {
+
+			/**event start **/
+			onCameraOpen(e) {
+				console.log("Camera opened:", e);
+			},
+			onCameraClose(e) {
+				console.log("Camera closed:", e);
+			},
+			onDetectionCapture(e) {
+				this.imageBase64 = `data:image/jpeg;base64,${e.detail.base64_full}`;
+				this.vehicleBase64 = `data:image/jpeg;base64,${e.detail.base64_vehicle}`;
+				console.log("Detection captured:", e.detail.base64_full);
+				console.log("Detection captured:", e.detail.base64_vehicle);
+				this.writeToFile(e.detail.base64_full, 'base64_full')
+				this.writeToFile(e.detail.base64_vehicle, 'base64_vehicle')
+			},
+			onCaptured(e) {
+				this.imageBase64 = `data:image/jpeg;base64,${e.detail.base64_full}`;
+				console.log("Image captured:", e.detail.base64_full);
+				this.writeToFile(e.detail.base64_full, 'base64_captured')
+			},
+			onError(e) {
+				//android，如果用户拒绝了摄像头权限也会毁掉这个错误事件,可以根据错误，给除相应的提示
+				console.log("Error occurred:", e.detail);
+			},
+			/**func start **/
+			//openCamera closeCamea 会根据cameraview的生命周期自行调用，也可以手动调用，但只能在cameraview 挂载后才能调用，其他形式的调用不保证可用性
+			openCamera(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.openCamera === 'function') {
+					this.$refs.detector.openCamera(0);
+				} else {
+					console.error("Method openCamera not found on camera component");
+				}
+			},
+			closeCamera(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.closeCamera === 'function') {
+					this.$refs.detector.closeCamera();
+				} else {
+					console.error("Method closeCamera not found on camera component");
+				}
+			},
+			switchFlash(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.switchFlash === 'function') {
+					const flashMode = this.isFlashOn ? 0 : 1
+					this.$refs.detector.switchFlash(flashMode);
+					this.isFlashOn = !this.isFlashOn;
+				} else {
+					console.error("Method switchFlash not found on camera component");
+				}
+			},
+			takePicture(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.takePicture === 'function') {
+					this.$refs.detector.takePicture();
+				} else {
+					console.error("Method takePicture not found on camera component");
+				}
+			},
+			zoomIn(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.setZoomLevel === 'function') {
+					if (this.zoomLevel + 1 <= 10) {
+						this.zoomLevel = this.zoomLevel + 1
+					}
+					this.$refs.detector.setZoomLevel(this.zoomLevel);
+				} else {
+					console.error("Method takePicture not found on camera component");
+				}
+			},
+			zoomOut(e) {
+				if (this.$refs.detector && typeof this.$refs.detector.setZoomLevel === 'function') {
+					if (this.zoomLevel - 1 >= 0) {
+						this.zoomLevel = this.zoomLevel - 1
+					}
+					this.$refs.detector.setZoomLevel(this.zoomLevel);
+				} else {
+					console.error("Method takePicture not found on camera component");
+				}
+			},
+			writeToFile(content, fileName) {
+				plus.io.requestFileSystem(
+					plus.io.PUBLIC_DOCUMENTS, // 文件系统中的根目录
+					fs => {
+						// 创建或打开文件, fs.root是根目录操作对象,直接fs表示当前操作对象
+						let a = fs.root.toURL()
+						let dirPath = a + '/' + 'ry/' + fileName + '.txt';
+						fs.root.getFile(dirPath, {
+							create: true // 文件不存在则创建
+						}, fileEntry => {
+							// 文件在手机中的路径
+							console.log(fileEntry.fullPath, '文件在手机中的路径')
+							fileEntry.createWriter(writer => {
+								// 写入文件成功完成的回调函数
+								// 写入数据
+								writer.write(content);
+								writer.onwrite = e => {
+									console.log("写入数据成功");
+								};
+							})
+						}, e => {
+							console.log("getFile failed: " + e.message);
+						});
+					},
+					e => {
+						console.log(e.message);
+					}
+				);
+
+			}
+		}
+	}
+</script>
+
+<!-- // 文件读取
+export const readFileIos = function(filename, callback) {
+	plus.io.requestFileSystem(plus.io.PUBLIC_DOCUMENTS, function(fs) {
+		// fs.root是根目录操作对象DirectoryEntry
+		let a = fs.root.toURL()
+		let dirPath = a + '/' + 'ry/' + filename + '.txt';
+		// /var/mobile/Containers/Data/Application/8D4886B0-4900-4B9E-99C5-BF53F72CB0BA/Documents/Pandora/documents/_documents/a/mayimei.txt
+		fs.root.getFile(dirPath, {
+			create: false
+		}, function(fileEntry) {
+			console.log(fileEntry)
+			fileEntry.file(function(file) {
+				console.log(file)
+				var fileReader = new plus.io.FileReader();
+				fileReader.readAsText(file, 'utf-8');
+				fileReader.onloadend = function(evt) {
+					var news = [];
+					var result = evt.target.result;
+					if (result != "")
+						console.log(result, '读取的内容啊啊啊啊')
+					callback({
+						state: 1,
+						message: "读取成功！",
+						data: result
+					});
+				}
+				fileReader.onerror = e => {
+					callback({
+						state: 0,
+						message: "读取失败！",
+						data: result
+					});
+				}
+			});
+		}, e => {
+			callback({
+				state: e.code,
+				message: e.message,
+			});
+		});
+	})
+} -->
+
+<!-- // 文件删除
+export const deleteFileIos = function(filename) {
+	plus.io.requestFileSystem(plus.io.PUBLIC_DOCUMENTS, function(fs) {
+		let a = fs.root.toURL();
+		let dirPath = a + '/' + 'ry/' + filename + '.txt';
+		fs.root.getFile(dirPath, {
+				create: false
+			},
+			function(fileEntry) { // 删除这个地址对应的文件
+				fileEntry.remove(function(entry) {
+					console.log("删除文件成功")
+				}, function(e) {
+					console.log(e.message);
+				})
+			},
+			function(err) {
+				console.log(err, '删除失败啊啊啊')
+			}
+		)
+	})
+
+} -->
